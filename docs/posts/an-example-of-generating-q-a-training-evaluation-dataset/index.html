@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>An example of generating Q&amp;A training/evaluation dataset from Large Language Models · Haifeng Zhao</title>
+<meta name="description" content="The first way is to leverage LangChain’s API. Deeplearning.ai has a great class on LangChain providing a demo generating Q&amp;A on top of OpenAI GPT-3.5. You can get more…">
+<meta property="og:title" content="An example of generating Q&amp;A training/evaluation dataset from Large Language Models · Haifeng Zhao">
+<meta property="og:description" content="The first way is to leverage LangChain’s API. Deeplearning.ai has a great class on LangChain providing a demo generating Q&amp;A on top of OpenAI GPT-3.5. You can get more…">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://piscaries.github.io/posts/an-example-of-generating-q-a-training-evaluation-dataset/">
+<meta property="og:image" content="https://piscaries.github.io/images/an-example-of-generating-q-a-training-evaluation-dataset/ca8675789c.jpeg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://piscaries.github.io/posts/an-example-of-generating-q-a-training-evaluation-dataset/">
+<link rel="alternate" type="application/rss+xml" title="Haifeng Zhao" href="/feed.xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a class="name" href="/">Haifeng Zhao</a><nav><a href="/">Writing</a><a href="/about/">About</a><a href="/feed.xml">RSS</a></nav></header>
+<main>
+<article>
+<h1>An example of generating Q&amp;A training/evaluation dataset from Large Language Models</h1>
+<p class="meta"><time datetime="2023-11-29">November 29, 2023</time></p>
+<p class="note">Originally published on <a href="https://medium.com/@piscaries/an-example-of-generating-q-a-training-evaluation-dataset-from-large-language-models-d6c99186ecc8">Medium</a>.</p>
+<p><img
+src="/images/an-example-of-generating-q-a-training-evaluation-dataset/ca8675789c.jpeg" /></p>
+<p><em>This short article will:</em></p>
+<ul>
+<li>Mention a couple of ways to generate LLM Q&amp;A finetuning data for
+training or evaluating purpose from structured data input</li>
+<li>Present a step-by-step demo to generate Q&amp;A data from public
+book dataset</li>
+<li>Share a few learnings on LLM data generation</li>
+</ul>
+<p>The first way is to leverage <a
+href="https://www.langchain.com/">LangChain</a>’s API. <a
+href="https://learn.deeplearning.ai/langchain/lesson/6/evaluation">Deeplearning.ai</a>
+has <a
+href="https://learn.deeplearning.ai/langchain/lesson/6/evaluation">a
+great class</a> on LangChain providing a demo generating Q&amp;A on top
+of OpenAI GPT-3.5. You can get more information from there if you prefer
+to use GPT.</p>
+<p>The second way is to use Llama 2 locally and prepare your own prompt
+customized to your dataset and leverage a large language model for data
+generation. Here I used local Llama 2 to generate Q&amp;A data samples
+from <a
+href="https://www.kaggle.com/datasets/saurabhbagchi/books-dataset/download?datasetVersionNumber=1">Kaggle
+public book dataset</a>. The full <a
+href="https://github.com/piscaries/llama-recipes-example/commit/fd2494fa0e84004f8aaef6ee29a8829ea3eee3c2">code
+commit</a> can be found here.</p>
+<p>Please make sure you have a 16G Nvidia GPU instance and you can run
+<a href="https://github.com/facebookresearch/llama">Meta Llama 2 sample
+code</a> successfully first.</p>
+<ol type="1">
+<li><a
+href="https://github.com/piscaries/llama-recipes-example/blob/main/examples/books/gen_train/book_metadata.json">The
+input dataset</a> is sampled and parsed from Kaggle public book dataset.
+After parsing, one book item looks like:</li>
+</ol>
+<pre class="graf"><code>{&quot;message_id&quot;: &quot;184&quot;, &quot;title&quot;: &quot;Shabanu: Daughter of the Wind (Border Trilogy)&quot;, &quot;author&quot;: &quot;SUZANNE FISHER STAPLES&quot;, &quot;year&quot;: &quot;1991&quot;, &quot;publisher&quot;: &quot;Laurel Leaf&quot;}</code></pre>
+<p>2. Then we need to prepare a prompt for LLM to generate Q&amp;A
+format as we need. LLM generally tends to redundant words to show
+politeness and interaction. If we need precise and short answers, it can
+be handled by clarifying the requirement on concise in the prompt. This
+may take a few iterations by interacting with LLM to get it right.</p>
+<pre class="graf"><code>{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;You are a JSON builder helping a book store owner to ask and answer questions. Always output your answer in JSON. No pre-amble. \n \
+  The book store owner will provide book document in the following format: \n \
+  &lt;Begin Document&gt; \n \
+  here is book document information in Json format \n \
+  &lt;End Document&gt; \n \
+  Based on the book document, please generate a question and an answer in JSON format. \n \
+  The JSON object only has two keys. One is the question and the other is the answer.  \n \
+  Your ONLY response with a JSON object. Here is an example of your output: \n \
+  {&quot;question&quot;: &quot;what is the title of the book written by James Wang&quot;, \n \
+  &quot;answer&quot;: &quot;the nature of human society&quot; \n \
+  }&quot;
+},
+
+{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Here is the book document: \
+  &lt;Begin Document&gt; \n \
+  {document} \n \
+  &lt;End Document&gt;&quot;
+}</code></pre>
+<p>3. Send the input samples in batches together with the prompt to LLM
+to generate Q&amp;A data.</p>
+<pre class="graf"><code># set up Llama-2 locally
+generator = Llama.build(
+        ckpt_dir=ckpt_dir,
+        tokenizer_path=tokenizer_path,
+        max_seq_len=max_seq_len,
+        max_batch_size=max_batch_size,
+)
+
+# qa_dialogs are prepared prompt inputs
+for i in range(0, dialog_size, max_batch_size):
+  dialogs = qa_dialogs[i:i+max_batch_size]
+  results = generator.chat_completion(
+                  dialogs,  
+                  max_gen_len=max_gen_len,
+                  temperature=temperature,
+                  top_p=top_p,
+              )</code></pre>
+<p>4. Here are some output examples showing LLM can complete the
+finetune training data generation job.</p>
+<pre class="graf"><code>{&quot;messages&quot;: [{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;You are a book seller answering questions about books&quot;}, {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;What is the author of the book &#39;A Painted House&#39;?&quot;}, {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;John Grisham&quot;}]}
+{&quot;messages&quot;: [{&quot;role&quot;: &quot;system&quot;, &quot;content&quot;: &quot;You are a book seller answering questions about books&quot;}, {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;What is the title of the book written by Terry Pratchett in 2001?&quot;}, {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;The Last Hero : A Discworld Fable&quot;}]}</code></pre>
+<p>Although Llama-2–7b-chat can prepare a training dataset with accurate
+information, the generated Q&amp;A data has an issue. Most questions are
+on title or author fields but few questions are on year and no questions
+are on publisher. I manipulated the prompts and the output focus could
+change over the book metadata fields but never finds a balance among
+them.</p>
+<p>A few conclusions from this practice on training sample generation
+with Llama-2–7b-chat model:</p>
+<ol type="1">
+<li>LLM can understand simple data generation instructions and
+understand structured data format</li>
+<li>Proper prompt engineering can lead to accurate output in simple
+format</li>
+<li>The more restrictions we add to the output format, such as format,
+content, amble words, etc., the harder LLM can output the ideal format
+as expected</li>
+<li>Increasing shots as examples in prompt does not guarantee a linear
+improvement in output quality.</li>
+<li>If a task can use deterministic methods, it is better to consider
+deterministic methods first before LLM because they could be more
+controllable, efficient and predictable.</li>
+</ol>
+
+</article>
+<p class="back"><a href="/">← All writing</a></p>
+</main>
+<footer class="site">© 2026 Haifeng Zhao · <a href="https://github.com/piscaries">GitHub</a></footer>
+</body>
+</html>

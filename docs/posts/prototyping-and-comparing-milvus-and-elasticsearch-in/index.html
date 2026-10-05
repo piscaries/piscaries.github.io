@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototyping and comparing Milvus and Elasticsearch in standalone mode · Haifeng Zhao</title>
+<meta name="description" content="The tech industry has been exploring vector databases primarily due to the rise and increasing importance of machine learning applications. These technologies rely heavily on…">
+<meta property="og:title" content="Prototyping and comparing Milvus and Elasticsearch in standalone mode · Haifeng Zhao">
+<meta property="og:description" content="The tech industry has been exploring vector databases primarily due to the rise and increasing importance of machine learning applications. These technologies rely heavily on…">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://piscaries.github.io/posts/prototyping-and-comparing-milvus-and-elasticsearch-in/">
+<meta property="og:image" content="https://piscaries.github.io/images/prototyping-and-comparing-milvus-and-elasticsearch-in/e0f7d0ab79.jpeg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://piscaries.github.io/posts/prototyping-and-comparing-milvus-and-elasticsearch-in/">
+<link rel="alternate" type="application/rss+xml" title="Haifeng Zhao" href="/feed.xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a class="name" href="/">Haifeng Zhao</a><nav><a href="/">Writing</a><a href="/about/">About</a><a href="/feed.xml">RSS</a></nav></header>
+<main>
+<article>
+<h1>Prototyping and comparing Milvus and Elasticsearch in standalone mode</h1>
+<p class="meta"><time datetime="2024-02-18">February 18, 2024</time></p>
+<p class="note">Originally published on <a href="https://medium.com/@piscaries/prototyping-and-comparing-milvus-and-elasticsearch-on-standalone-mode-fb4f2a3390ef">Medium</a>.</p>
+<p><img
+src="/images/prototyping-and-comparing-milvus-and-elasticsearch-in/e0f7d0ab79.jpeg" /></p>
+<p>The tech industry has been exploring vector databases primarily due
+to the rise and increasing importance of machine learning applications.
+These technologies rely heavily on vector data for various
+functionalities, such as recommendation systems, similarity searches,
+natural language processing, and image recognition.</p>
+<p>Among all vector DB solutions, Elasticsearch and Milvus are two
+popular options. This article will:</p>
+<ol type="1">
+<li><strong>Prototype</strong> indexing and searching on these two
+popular vector DBs by demonstrating code and setup on standalone
+nodes</li>
+<li><strong>Compare</strong> these two vector DBs on search result and
+load test latency</li>
+<li><strong>Share</strong> the author’s perspective on the
+characteristics and practical applications of vector search.</li>
+</ol>
+<p>Note: Large scale on-prem or cloud deployment is beyond this
+article’s scope.</p>
+<h2 id="the-introduction-of-elasticsearch-and-milvus">The Introduction
+of Elasticsearch and Milvus</h2>
+<p><a href="https://www.elastic.co/elasticsearch">Elasticsearch</a> is a
+highly scalable open-source full-text search and analytics engine widely
+used by the industry. Elastic is the company behind Elasticsearch. While
+it continues to develop Elasticsearch, the company also provides
+commercial products.</p>
+<p><a href="https://milvus.io/">Milvus</a> is an open-source vector
+database designed by <a href="https://zilliz.com/">Zilliz</a>
+specifically for AI and ML applications. It is optimized for storing and
+searching large-scale vector data.</p>
+<p>Before delving into the prototype of indexing and performance
+comparison, there are a few differences worth attention between these
+two Vector DBs:</p>
+<ol type="1">
+<li>Full text search: it means to directly apply keyword text but not
+vector for document searching. Elasticsearch started from text search,
+so it supports text search. Milvus is built for high-performing vector
+search, so it does not support full text search.</li>
+<li>Maturity: Elasticsearch offers a wide range of tools such as Kibana
+for visualization and Logstash for log processing. Milvus is newer to
+the market, so the community support is not as extensive as
+Elasticsearch yet.</li>
+<li>License: Milvus is under Apache 2.0, so it is free to be used,
+modified and distributed. The machine learning features are free to use.
+Elasticsearch changed its License in 2021 from Apache License 2.0 to a
+combination of Server Side Public License and Elastic License. Many
+machine learning features are under paid license. (I encountered some
+limitations in my exploration but worked with turnaround solutions)</li>
+</ol>
+<h2 id="prerequisite">Prerequisite</h2>
+<p>**Data **: <a
+href="https://www.kaggle.com/datasets/saurabhbagchi/books-dataset/data">Kaggle
+Book Dataset</a>. I used it for <a
+href="https://medium.com/@piscaries/large-language-model-finetuning-practice-7e131291046e">my
+previous blog</a> on LLM finetuning. I will continue to use it for this
+article. I extracted 5000 books for indexing. The data can be found on
+my Github <a
+href="https://github.com/piscaries/vectordbdemos/blob/main/data/books_5000.csv">repo</a>.
+I concatenate title, author, publisher and year fields together to build
+the vector indexing field because these fields are short and combining
+them together can enable us search multiple field information about
+books.</p>
+<p>**Setup **: I set up Milvus and Elasticsearch Docker nodes in
+standalone mode on my workstation. For load testing, I also used Docker
+with the load testing tool Locust.</p>
+<h2 id="setup-milvus-and-index-data">Setup Milvus and Index data</h2>
+<p>To run Milvus on Docker, you can refer to the docker-compose.yml file
+in my code <a
+href="https://github.com/piscaries/vectordbdemos/blob/main/milvus/docker-compose.yml">repo</a>.</p>
+<p>I used pymilvus on my Jupyter notebook. The script is also shared in
+the code <a
+href="https://github.com/piscaries/vectordbdemos/blob/main/milvus/milvus_books_vector_on_merged.py">repo</a>.</p>
+<ol type="1">
+<li>Connect to Milvus</li>
+</ol>
+<pre class="graf"><code>from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection, utility
+
+connections.connect(host=&#39;&lt;milvus hostname&gt;&#39;, port=&#39;19530&#39;)</code></pre>
+<p>2. Create a Collection</p>
+<pre class="graf"><code>def create_milvus_collection(collection_name, dim=768):
+    if utility.has_collection(collection_name):
+        utility.drop_collection(collection_name)
+    
+    fields = [
+            FieldSchema(name=&quot;id&quot;, dtype=DataType.VARCHAR, is_primary=True, auto_id=False, max_length=20),
+            FieldSchema(name=&quot;book_title&quot;, dtype=DataType.VARCHAR, max_length=500), 
+            FieldSchema(name=&quot;book_author&quot;, dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name=&quot;year_of_publication&quot;, dtype=DataType.VARCHAR, max_length=10),
+            FieldSchema(name=&quot;publisher&quot;, dtype=DataType.VARCHAR, max_length=100),
+            FieldSchema(name=&quot;combined_fields&quot;, dtype=DataType.VARCHAR, max_length=710),
+            FieldSchema(name=&quot;combined_fields_vector&quot;, dtype=DataType.FLOAT_VECTOR,dim=dim)
+    ]
+    schema = CollectionSchema(fields=fields, description=&#39;Book-Info&#39;)
+    collection = Collection(name=collection_name, schema=schema)
+    
+    index_params = {
+        &#39;metric_type&#39;: &quot;COSINE&quot;,
+        &#39;index_type&#39;: &quot;IVF_SQ8&quot;,
+        &#39;params&#39;: {&quot;nlist&quot;: 1}
+    }
+    collection.create_index(field_name=&#39;combined_fields_vector&#39;, index_params=index_params)
+    return collection
+
+collection = create_milvus_collection(&#39;book_search&#39;)</code></pre>
+<p>“combined_fields_vector” is the field to be indexed as the float
+vector. nlist is set as 1 because this prototyping only has 5000
+documents. Thus, we only have one index cluster so all indexed documents
+will be scanned when searching. Metric_type is set to COSINE. This
+should be consistent with Elasticsearch setup so we can get close to an
+“apple-to-apple” comparison.</p>
+<p>3. Insert data with <a
+href="https://github.com/towhee-io/towhee?tab=readme-ov-file">towhee</a></p>
+<pre class="graf"><code>from towhee import ops, pipe
+import numpy as np
+
+insert_pipe = (pipe.input(&#39;id&#39;, &#39;book_title&#39;, &#39;book_author&#39;, &#39;year_of_publication&#39;, &#39;publisher&#39;, &#39;combined_fields&#39;) 
+               .map(&#39;combined_fields&#39;, &#39;combined_fields_vector&#39;, ops.text_embedding.dpr(model_name=&#39;facebook/dpr-ctx_encoder-single-nq-base&#39;))
+               .map(&#39;combined_fields_vector&#39;, &#39;combined_fields_vector&#39;, lambda x: x / np.linalg.norm(x, axis=0))
+               .map((&#39;id&#39;, &#39;book_title&#39;, &#39;book_author&#39;, &#39;year_of_publication&#39;, &#39;publisher&#39;, &#39;combined_fields&#39;, &#39;combined_fields_vector&#39;), &#39;res&#39;, ops.ann_insert.milvus_client(host=&#39;milvus-standalone&#39;, port=&#39;19530&#39;, collection_name=&#39;book_search&#39;))
+               .output(&#39;res&#39;) )
+
+import csv
+with open(&#39;path to books_5000.csv&#39;, encoding=&#39;Latin-1&#39;) as f:
+    reader = csv.reader(f, delimiter=&#39;;&#39;)
+    next(reader)
+    for row in reader:
+        row = row[0:5]
+        row.append(row[1] + &quot; &quot; + row[2] + &quot; &quot; + row[3] + &quot; &quot; + row[4])
+        insert_pipe(*row)</code></pre>
+<p>It took 240s (repeated a few times). However, I feel it shouldn’t
+take that long. It could be some unrelated configuration issue.</p>
+<p>4. Search the collection</p>
+<pre class="graf"><code>encoder = ops.text_embedding.dpr(model_name=&quot;facebook/dpr-ctx_encoder-single-nq-base&quot;)
+collection.load()
+
+search_params = {
+    &quot;metric_type&quot;: &quot;COSINE&quot;, 
+    &quot;offset&quot;: 0, 
+    &quot;ignore_growing&quot;: False, 
+    &quot;params&quot;: {&quot;nprobe&quot;: 1}
+}
+
+results = collection.search(
+    data=[encoder(&lt;text query&gt;)], 
+    anns_field=&quot;combined_fields_vector&quot;, 
+    param=search_params,
+    limit=20,
+    expr=None,
+    output_fields=[&#39;book_title&#39;, &#39;book_author&#39;, &#39;year_of_publication&#39;, &#39;publisher&#39;],
+    consistency_level=&quot;Strong&quot;
+)</code></pre>
+<p>Returns 20 closed results to &lt;text query&gt; based on vector
+cosine similarity.</p>
+<p>5. Done</p>
+<h2 id="setup-elasticsearch-and-index-data">Setup Elasticsearch and
+Index data</h2>
+<p>To run Elasticsearch on Docker, you can refer to the
+docker-compose.yml file in my code <a
+href="https://github.com/piscaries/vectordbdemos/blob/main/elasticsearch/docker-compose.yml">repo</a>.
+It runs in standalone mode and disables security features.</p>
+<p>I shared Jupyter script in the code <a
+href="https://github.com/piscaries/vectordbdemos/blob/main/elasticsearch/elasticsearch_books.py">repo</a>.</p>
+<ol type="1">
+<li>Connect to Elasticsearch</li>
+</ol>
+<pre class="graf"><code>from elasticsearch import Elasticsearch
+
+client = Elasticsearch(
+    &quot;http://&lt;elastic search hostname&gt;:9200&quot;
+)</code></pre>
+<p>2. Create an index</p>
+<pre class="graf"><code># Define the mapping
+mappings = {
+    &quot;properties&quot;: {
+        &quot;book_vector&quot;: {
+            &quot;type&quot;: &quot;dense_vector&quot;,
+            &quot;dims&quot;: 768,
+            &quot;index&quot;: &quot;true&quot;,
+            &quot;similarity&quot;: &quot;cosine&quot;
+        }
+    }
+}
+# Create the index
+client.indices.create(index=&#39;book_index&#39;, mappings=mappings)</code></pre>
+<p>3. Index data</p>
+<pre class="graf"><code>from sentence_transformers import SentenceTransformer
+from urllib.request import urlopen
+import csv
+import json
+
+model = SentenceTransformer(&#39;sentence-transformers/facebook-dpr-ctx_encoder-single-nq-base&#39;)
+operations = []
+with open(&#39;path to books_5000.csv&#39;, encoding=&#39;Latin-1&#39;) as f:
+    reader = csv.DictReader(f, delimiter=&#39;;&#39;)
+    for row in reader:
+        operations.append({&quot;index&quot;: {&quot;_index&quot;: &quot;book_index&quot;}})
+        combined_book_fields = row[&quot;Book-Title&quot;] + &quot; &quot; + row[&quot;Book-Author&quot;] + &quot; &quot; + row[&quot;Year-Of-Publication&quot;] + &quot; &quot; + row[&quot;Publisher&quot;]
+        row[&quot;book_vector&quot;] = model.encode(combined_book_fields).tolist()
+        operations.append(row)
+
+client.bulk(index=&quot;book_index&quot;, operations=operations, refresh=True)</code></pre>
+<p>It took around 60s to build the index (Repeated a few times)</p>
+<p>4. Search</p>
+<pre class="graf"><code>response = client.search(
+    index=&quot;book_index&quot;,
+    knn={
+      &quot;field&quot;: &quot;book_vector&quot;,
+      &quot;query_vector&quot;: model.encode(&lt;text query&gt;),
+      &quot;k&quot;: 20,
+      &quot;num_candidates&quot;: 5000,
+    },
+    size=50
+)</code></pre>
+<p>Returns 20 closed results to &lt;text query&gt; based on vector
+cosine similarity.</p>
+<p>5. Done</p>
+<h2 id="search-quality-analysis-on-example-queries">Search quality
+analysis on example queries</h2>
+<p>The purpose of this analysis is to help us get a taste on what we can
+benefit or lose by using vector search.</p>
+<p><strong>Setup</strong>:</p>
+<p>A. I created a few query examples by using book titles, authors,
+years of publishing and publishers. I also created a few natural
+language questions, such as “What books did O’Reilly publish”.</p>
+<p>B.I set the num of results to 20 and calculated Precision and
+Recall.</p>
+<p>C. Performed on both Milvus and Elasticsearch. Results are shared in
+the code repo[<a
+href="https://github.com/piscaries/vectordbdemos/blob/main/data/vector%20search%20result%20-%20Milvus.csv">Milvus</a>,
+<a
+href="https://github.com/piscaries/vectordbdemos/blob/main/data/vector%20search%20result%20-%20ElasticSearch.csv">Elasticsearch</a>].</p>
+<p><strong>Result</strong>:</p>
+<ol type="1">
+<li>The results of Milvus and Elasticsearch show lots of similarity
+after we use the same embedding model and similarity metric. It is a
+cross validation of their implementations.</li>
+<li>Overall precision and recall are believed to be lower than text
+search.</li>
+<li>Vector search is not semantic search. It cannot understand human
+questions such as “What books did O’Reilly publish”. The result is worse
+than purely query with “O’Reilly”</li>
+<li>Vector search can help discovery similar concepts. E.g., for the
+query “The Future Just Happened”, vector search found a few books
+conceptually close but not sharing common query keywords, such as “ From
+This Moment on”, “The Coming” .</li>
+</ol>
+<p><strong>Potential improvement</strong>:</p>
+<ol type="1">
+<li>The search quality is highly related to the embedding model.
+Understanding the embedding model for the search problem is
+important.</li>
+<li>Index each individual fields and create multiple vector indexes for
+the data.</li>
+<li>Combine text search and leverage semantic search techniques such as
+query understanding or LLM related search technology</li>
+<li>Expand retrieval returns and apply ranking models to increase
+precision and recall at the same time</li>
+</ol>
+<h2 id="load-testing-with-locust">Load testing with Locust</h2>
+<p>I choose <a href="https://locust.io/">Locust</a> for load testing
+because of the limitation of Elasticsearch support on vector search.
+Elasticsearch enables curl http request with vector, but calling an
+embedding model in curl requires commercial license. However,
+Elasticsearch python connection allows calling an embedding model in
+search. So an easy turnaround solution is to find a python load testing
+tool.</p>
+<p>I will skip the <a
+href="https://docs.locust.io/en/stable/">instruction</a> of Locust. If
+you want a standalone Locust Docker-compose.yml file, you can find in my
+<a
+href="https://github.com/piscaries/vectordbdemos/blob/main/locust/docker-compose.yml">repo</a>.
+Meanwhile, you can also find the locustfile.py files that I used to test
+the two DBs in the code repo[<a
+href="https://github.com/piscaries/vectordbdemos/blob/main/locust/locustfile_milvus.py">Milvus</a>,
+<a
+href="https://github.com/piscaries/vectordbdemos/blob/main/locust/locustfile_es.py">Elasticsearch</a>].</p>
+<p>I performed two rounds of load test separately on the two DBs without
+changing machine context. One test simulates 20 users and the other
+simulates 30 users. The user number is small due to my Docker engine
+memory limit, but we don’t need a comprehensive test here.</p>
+<p><strong>Result</strong>: The response time from Milvus is
+significantly better than Elasticsearch based on my machine setup.
+Milvus is 15% better on average response time than Elasticsearch and 20%
+better on TP95 than Elasticsearch.</p>
+<p><strong>Note</strong>: Since my setup are just two standalone Docker
+nodes on my workstation, the conclusion cannot be applied to other
+scenarios such as distributed mode or cloud environment. I would be
+happy to take a look for those scenarios if needed.</p>
+<h2 id="what-to-choose">What to choose</h2>
+<p>Both vector DBs provides methods for creating indexes, performing
+nearest neighbor searches. Milvus focuses on optimizing vector search.
+In my opinion, it really depends on the application’s situation and
+available resources:</p>
+<ul>
+<li>If the use case heavily depends on vector search, such as image,
+audio or video search. Milvus could be a better choice in my
+opinion.</li>
+<li>If the application has been built on Elasticsearch already,
+leveraging Elasticsearch vector search could be a good start. Whether to
+purchase a commercial license is another topic, but it shouldn’t be
+difficult to implement some licensed ML features such as KNN search,
+embedding model integration, and blended search on text and vector
+results.</li>
+<li>Maintaining two types of DBs at the same time could be useful, but
+it should be a trade-off together with business impact and other
+potential ML areas worth investment such as ranking and query
+understanding.</li>
+</ul>
+<h2 id="summary">Summary</h2>
+<ol type="1">
+<li>This article did preliminary comparison on Elasticsearch and Milvus,
+two of the popular vector DB solutions. It provided prototyping for a
+quick vector DB understanding and shares <a
+href="https://github.com/piscaries/vectordbdemos/tree/main">code</a> for
+anyone who wants to play with it.</li>
+<li>The search results of the two vector DBs on the given dataset are
+comparable.</li>
+<li>In terms of latency, Milvus outperforms Elasticsearch on standalone
+nodes.</li>
+</ol>
+<p>Let me know if you have any questions or need any help to build
+search solutions. If you want to refer any part of this article, please
+add reference to this article’s link.</p>
+<h2 id="references">References</h2>
+<ol type="1">
+<li>Milvus: <a
+href="https://milvus.io/docs/overview.md"><span>https://milvus.io/docs/overview.md</span></a></li>
+<li>Elasticsearch: <a
+href="https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html"><span>https://www.elastic.co/guide/en/elasticsearch/reference/current/index.html</span></a></li>
+<li>Locust: <a
+href="https://docs.locust.io/en/stable/"><span>https://docs.locust.io/en/stable/</span></a></li>
+</ol>
+
+</article>
+<p class="back"><a href="/">← All writing</a></p>
+</main>
+<footer class="site">© 2026 Haifeng Zhao · <a href="https://github.com/piscaries">GitHub</a></footer>
+</body>
+</html>

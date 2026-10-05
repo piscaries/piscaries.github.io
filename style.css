@@ -1,0 +1,56 @@
+:root {
+  --text: #1f2328;
+  --muted: #59636e;
+  --accent: #0b5cad;
+  --rule: #d8dee4;
+  --code-bg: #f6f8fa;
+  --bg: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --accent: #6cb6ff;
+    --rule: #30363d;
+    --code-bg: #161b22;
+    --bg: #0d1117;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 18px/1.65 Charter, "Iowan Old Style", Georgia, serif;
+}
+header.site, main, footer.site { max-width: 720px; margin: 0 auto; padding: 0 20px; }
+header.site { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; padding-top: 28px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+header.site .name { font: 600 20px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); text-decoration: none; }
+header.site nav a { margin-left: 18px; font: 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--muted); text-decoration: none; }
+header.site nav a:first-child { margin-left: 0; }
+footer.site { margin-top: 64px; padding-top: 16px; padding-bottom: 40px; border-top: 1px solid var(--rule); color: var(--muted); font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+h1, h2, h3 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.25; }
+h1 { font-size: 32px; margin: 36px 0 8px; }
+h2 { font-size: 24px; margin-top: 44px; }
+h3 { font-size: 20px; margin-top: 32px; }
+.meta { color: var(--muted); font: 15px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.note { color: var(--muted); font-size: 16px; border-left: 3px solid var(--rule); padding-left: 12px; }
+.tagline { color: var(--muted); margin-top: 28px; }
+ul.posts { list-style: none; padding: 0; }
+ul.posts li { margin: 28px 0; }
+ul.posts li > a { font: 600 21px/1.3 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-decoration: none; }
+ul.posts .meta { display: block; margin-top: 4px; }
+ul.posts p { margin: 6px 0 0; color: var(--muted); font-size: 17px; }
+img { max-width: 100%; height: auto; display: block; margin: 24px auto 8px; border-radius: 4px; }
+img + em, p > em:only-child { display: block; text-align: center; color: var(--muted); font-size: 15px; }
+blockquote { margin: 20px 0; padding-left: 16px; border-left: 3px solid var(--rule); color: var(--muted); }
+code { font: 0.88em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 4px; }
+pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 6px; line-height: 1.45; }
+pre code { background: none; padding: 0; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; margin: 20px 0; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--rule); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: var(--code-bg); }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 36px 0; }
+.back { margin-top: 48px; }

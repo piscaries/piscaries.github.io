@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can Open Source Coding Agents Build Comparable Software for Less? · Haifeng Zhao</title>
+<meta name="description" content="Coding agents such as Claude Code and Codex can handle much of the work from planning through testing, but heavy model usage can be expensive.">
+<meta property="og:title" content="Can Open Source Coding Agents Build Comparable Software for Less? · Haifeng Zhao">
+<meta property="og:description" content="Coding agents such as Claude Code and Codex can handle much of the work from planning through testing, but heavy model usage can be expensive.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://piscaries.github.io/posts/can-open-source-coding-agents-build-comparable-software-for/">
+<meta property="og:image" content="https://piscaries.github.io/images/can-open-source-coding-agents-build-comparable-software-for/3862afabb7.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://piscaries.github.io/posts/can-open-source-coding-agents-build-comparable-software-for/">
+<link rel="alternate" type="application/rss+xml" title="Haifeng Zhao" href="/feed.xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a class="name" href="/">Haifeng Zhao</a><nav><a href="/">Writing</a><a href="/about/">About</a><a href="/feed.xml">RSS</a></nav></header>
+<main>
+<article>
+<h1>Can Open Source Coding Agents Build Comparable Software for Less?</h1>
+<p class="meta"><time datetime="2026-08-03">August 3, 2026</time></p>
+<p class="note">Originally published on <a href="https://medium.com/@piscaries/can-open-coding-agents-build-comparable-software-for-less-f91b9aa450f7">Medium</a>.</p>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/3862afabb7.png" /></p>
+<h2 id="1-open-alternatives-to-commercial-coding-agents"><strong>1. Open
+alternatives to commercial coding agents</strong></h2>
+<p>Coding agents such as Claude Code and Codex can handle much of the
+work from planning through testing, but heavy model usage can be
+expensive.</p>
+<p>Open-source coding agents offer another route. Teams can choose the
+agent harness and model separately. The field is moving quickly. <a
+href="https://github.com/anomalyco/opencode">OpenCode</a> was publicly
+announced in June 2025, and <a
+href="https://github.com/xai-org/grok-build">Grok Build</a> published
+its source in July 2026. Options from China include <a
+href="https://github.com/QwenLM/qwen-code">Qwen Code</a>, <a
+href="https://github.com/bytedance/trae-agent">Trae Agent</a>, and <a
+href="https://github.com/MoonshotAI/kimi-code">Kimi Code</a>.</p>
+<p>That led me to a practical question:</p>
+<blockquote>
+<p>Can an open source coding agent paired with an open model deliver
+useful software at a lower cost than Claude Code or Codex?</p>
+</blockquote>
+<p>To test that question, I asked three coding-agent stacks to build the
+same product independently:</p>
+<ol type="1">
+<li>Grok Build + GLM 5.2</li>
+<li>OpenCode + GLM 5.2</li>
+<li>Claude Code + Opus 4.6/4.8<br />
+to independently build the same product: a technical blog writer that
+researches GitHub repositories, lets the user approve the evidence, and
+then plans and generates a cited article.</li>
+</ol>
+<p>To make this single-task build by three coding agents as objective as
+possible, I defined one common task using Codex, outside all three
+participating stacks, to implement both the benchmark task and a
+separate deterministic code-quality evaluator. These details will be
+shared in section 2.</p>
+<p>The autonomous-product results were encouraging:</p>
+<ul>
+<li>All three stacks produced working applications and passed the
+benchmark’s objective workflow gates.</li>
+<li>Claude Code built faster and used fewer model calls and tokens,
+while the two open stacks had lower estimated model costs.</li>
+<li>The open-stack applications matched or exceeded the Claude Code
+application across all five measured quality dimensions.</li>
+</ul>
+<p>The benchmarks, generated applications, recorded metrics,
+code-quality evaluator, and reproduction instructions are available in
+the <a
+href="https://github.com/piscaries/open-coding-agent-build-study">open-source
+repository</a>.</p>
+<hr />
+<h2
+id="2-experiment-design-one-product-two-build-modes-and-an-independent-evaluator"><strong>2.
+Experiment design: one product, two build modes, and an independent
+evaluator</strong></h2>
+<h3
+id="21-choosing-a-product-that-is-challenging-but-buildable"><strong>2.1
+Choosing a product that is challenging but buildable</strong></h3>
+<p>I chose a technical blog writer for coding agents to build, because
+it sits between a toy task and an open-ended enterprise project. A tiny
+coding exercise would not distinguish capable stacks. A large system
+would require repeated product decisions and human clarification,
+undermining an independent comparison.</p>
+<p>The product was a local, single-user application that turns a writing
+idea into a cited technical article grounded in GitHub evidence. It had
+to:</p>
+<ul>
+<li>research relevant repositories through the supplied GitHub
+gateway;</li>
+<li>let the user review and approve the evidence;</li>
+<li>plan and generate the article with a fixed runtime model; and</li>
+<li>provide a browser workflow with deterministic end-to-end tests.</li>
+</ul>
+<p>This scope was large enough to test full-stack engineering, tool
+integration, prompt design, and evidence safety, but bounded enough for
+one independent build.</p>
+<h3 id="22-keeping-the-comparison-consistent-and-independent">2.2
+Keeping the comparison consistent and independent</h3>
+<p>A coding agent’s results can be shaped by both human guidance and the
+environment it works in. To make the comparison reflect differences
+between the stacks — not differences in operator help, tools, or
+setup — I kept these factors as consistent as possible:</p>
+<ul>
+<li>Every stack received the same task, platform, dependencies, runtime
+model, research gateway, and development tools within each mode.</li>
+<li>Every run started in a fresh Docker sandbox containing only its
+assigned coding agent.</li>
+<li>After implementation began, I monitored the run but did not help
+write or repair the software.</li>
+<li>The harness recorded time, model calls, tokens, costs, source code,
+logs, and verification evidence.</li>
+</ul>
+<h3
+id="23-two-benchmark-modes-specified-architecture-and-autonomous-product">2.3
+Two benchmark modes: specified architecture and autonomous product</h3>
+<p>I also tested how much engineering freedom the agents could handle.
+The same product was built in two modes of freedom. Both modes provided
+the same product goal, expected outcomes, fixed platform, dependencies,
+and development tools. They differed in how much of the solution was
+already designed:</p>
+<ol type="1">
+<li><strong>Specified-architecture build:</strong> The agent also
+received the application architecture, UI framework, contracts, schemas,
+code structure, and scaffolding. Its job was to implement the missing
+product logic.</li>
+<li><strong>Autonomous-product build:</strong> The agent received no
+predefined architecture or code structure. It had to define the product
+scope, design the application, and implement the complete solution.</li>
+</ol>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/5833fce9b0.png" /></p>
+<h3
+id="24-build-performance-implementation-time-and-builder-model-cost">2.4
+Build performance: implementation time and builder-model cost</h3>
+<p>I define <strong>build performance</strong> as total implementation
+time and builder-model cost. Model calls and tokens provide supporting
+evidence about the model activity behind those two outcomes.</p>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/3ffa0de420.png" /></p>
+<ul>
+<li><strong>Specified-architecture build:</strong> Claude Code finished
+in 52m 42s, compared with 56m 18s for Grok Build and 61m 18s for
+OpenCode. The two GLM builds had retrospective API-equivalent cost
+estimates of $5.31–$5.61, 55–57% below Claude Code’s reported
+$12.36.</li>
+<li><strong>Autonomous-product build:</strong> Claude Code finished in
+15m 41s, roughly half the 28m 11s–32m 17s used by the two open-agent
+stacks. The GLM builds cost an estimated $2.32–$2.43, 35–38% below
+Claude Code’s reported $3.75.</li>
+</ul>
+<p>All times measure implementation wall time. GLM costs are estimates
+based on frozen July 31, 2026 prices, while Claude costs are reported by
+Claude Code.</p>
+<h3 id="25-evaluating-delivered-code-quality-independently">2.5
+Evaluating delivered code quality independently</h3>
+<p>Build time and model cost tell only part of the story. I also wanted
+to know whether each stack delivered high-quality code. To evaluate that
+independently, I used Codex to build a separate deterministic
+code-quality evaluator for the three autonomous-product applications.
+The evaluator was developed outside the participating stacks and applied
+the same checks and browser scenarios across five dimensions:</p>
+<ul>
+<li>Requirements completeness</li>
+<li>Functional correctness</li>
+<li>Maintainability</li>
+<li>Security</li>
+<li>Usability</li>
+</ul>
+<p>Each dimension is scored from 0 to 100; the evaluator does not
+calculate an aggregate winner score. It preserves the evidence behind
+every score. Test results and source-code counts are direct
+observations, while several maintainability and usability scores use
+evaluator-defined heuristics.</p>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/6d47c96f8d.png" /></p>
+<p><em>- <strong>Open-agent results:</strong> For this specific
+autonomous-product build, both open-agent applications scored higher
+than the Claude Code application on maintainability and matched or
+exceeded it on every other dimension.</em></p>
+<ul>
+<li><strong>Claude Code correctness:</strong> The TypeScript check could
+not resolve a CSS import, reducing the score to 92, although the build,
+tests, and browser workflows all passed.</li>
+<li><strong>Claude Code maintainability:</strong> The score of 43
+reflected the same type-check failure, 39 unsafe TypeScript escapes such
+as `any` across 1,757 production lines, and high branch-token density.
+Its duplication and module-size checks passed.</li>
+</ul>
+<p>These scores compare one frozen application per stack under one
+consistent rubric. They are not a general ranking: another task — or
+another run of the same task — could produce different results.</p>
+<hr />
+<h2 id="3-open-source-coding-stacks-are-now-a-practical-option">3. Open
+source coding stacks are now a practical option</h2>
+<p>This experiment gives a scoped yes to both questions:</p>
+<blockquote>
+<p><strong>Can an open source</strong> <strong>coding stack deliver
+useful software at lower model cost?</strong></p>
+</blockquote>
+<p>For this product, Grok Build + GLM 5.2 and OpenCode + GLM 5.2
+delivered working software at lower estimated builder-model cost than
+Claude Code + Opus 4.8. Claude Code remained faster and used fewer calls
+and tokens.</p>
+<blockquote>
+<p><strong>Can open source</strong> <strong>coding agents build under
+different levels of engineering freedom?</strong></p>
+</blockquote>
+<p>Both open-agent stacks succeeded when implementing within a supplied
+architecture and when designing an autonomous solution from a product
+vision.</p>
+<p><strong>These findings can deliver substantial benefits to two
+groups:</strong></p>
+<ol type="1">
+<li><strong>Enterprises:</strong><br />
+ — <strong>Lower AI development costs</strong>: Open source coding
+agents paired with open models can reduce the cost of AI-assisted
+software development, whether the model is accessed through a managed
+API or hosted internally.<br />
+ — <strong>Better protection for enterprise data and intellectual
+property:</strong> Running an open source coding agent internally gives
+enterprises more control over repository and document access instead of
+granting a commercial coding-agent service broad access to sensitive
+assets. When the open model is also self-hosted, source code, documents,
+prompts, business-domain knowledge, and engineering practices can remain
+within the enterprise security boundary.</li>
+<li><strong>Individual developers:</strong><br />
+ — Open source coding agents and open models lower the financial barrier
+between an idea and working software.<br />
+ — This expanded access matters especially to students and developers in
+regions where commercial coding-agent subscriptions are difficult to
+afford.</li>
+</ol>
+<p>In summary, this experiment showed that open source coding agents
+paired with an open model could deliver working, high-quality software
+for one product at lower estimated model cost. <strong>It does not prove
+that open stacks are universally better.</strong> However, the result is
+meaningful: open source coding stacks deserve serious consideration by
+enterprises and individual developers choosing how to build software
+with AI.</p>
+<hr />
+<h2
+id="4-appendix-screenshots-of-the-three-autonomous-product-applications">4.
+Appendix: Screenshots of the three autonomous-product applications</h2>
+<p>The screenshots below show the starting page and generated article
+from each autonomous-product build. They offer a quick look at how the
+three coding agents interpreted the same product vision and designed the
+user experience.</p>
+<p>To inspect the generated code or run the applications yourself,
+follow the instructions in the <a
+href="https://github.com/piscaries/open-coding-agent-build-study">open-source
+repository</a>.</p>
+<h3 id="grok-build--glm-52">Grok Build + GLM 5.2</h3>
+<ul>
+<li><strong>Starting page</strong></li>
+</ul>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/a520cae793.png" /></p>
+<ul>
+<li><strong>Generated article</strong></li>
+</ul>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/e2206afce3.png" /></p>
+<h3 id="opencode--glm-52">OpenCode + GLM 5.2</h3>
+<ul>
+<li><strong>Starting page</strong></li>
+</ul>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/1de80c6948.png" /></p>
+<ul>
+<li><strong>Generated article</strong></li>
+</ul>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/77324a6b5d.png" /></p>
+<h3 id="claude-code--opus-48">Claude Code + Opus 4.8</h3>
+<ul>
+<li><strong>Starting page</strong></li>
+</ul>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/a585ce243f.png" /></p>
+<ul>
+<li><strong>Generated article</strong></li>
+</ul>
+<p><img
+src="/images/can-open-source-coding-agents-build-comparable-software-for/c8cb8cfa2e.png" /></p>
+
+</article>
+<p class="back"><a href="/">← All writing</a></p>
+</main>
+<footer class="site">© 2026 Haifeng Zhao · <a href="https://github.com/piscaries">GitHub</a></footer>
+</body>
+</html>

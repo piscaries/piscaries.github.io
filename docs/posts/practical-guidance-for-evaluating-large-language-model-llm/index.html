@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practical Guidance for Evaluating Large Language Model (LLM) Products · Haifeng Zhao</title>
+<meta name="description" content="In today’s data-centric landscape, machine learning (ML) models are crucial for driving decisions, automating processes, and enhancing user experiences across various…">
+<meta property="og:title" content="Practical Guidance for Evaluating Large Language Model (LLM) Products · Haifeng Zhao">
+<meta property="og:description" content="In today’s data-centric landscape, machine learning (ML) models are crucial for driving decisions, automating processes, and enhancing user experiences across various…">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://piscaries.github.io/posts/practical-guidance-for-evaluating-large-language-model-llm/">
+<meta property="og:image" content="https://piscaries.github.io/images/practical-guidance-for-evaluating-large-language-model-llm/584326c361.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://piscaries.github.io/posts/practical-guidance-for-evaluating-large-language-model-llm/">
+<link rel="alternate" type="application/rss+xml" title="Haifeng Zhao" href="/feed.xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a class="name" href="/">Haifeng Zhao</a><nav><a href="/">Writing</a><a href="/about/">About</a><a href="/feed.xml">RSS</a></nav></header>
+<main>
+<article>
+<h1>Practical Guidance for Evaluating Large Language Model (LLM) Products</h1>
+<p class="meta"><time datetime="2024-09-16">September 16, 2024</time></p>
+<p class="note">Originally published on <a href="https://medium.com/@piscaries/practical-guidance-for-evaluating-large-language-model-llm-products-391807796000">Medium</a>.</p>
+<p><img
+src="/images/practical-guidance-for-evaluating-large-language-model-llm/584326c361.png" /></p>
+<p>In today’s data-centric landscape, machine learning (ML) models are
+crucial for driving decisions, automating processes, and enhancing user
+experiences across various industries. The effectiveness and reliability
+of these models depend not only on their ability to learn from data but
+also on the rigor and precision with which they are evaluated.</p>
+<p>This article presents a overview of evaluation practices for Large
+Language Model (LLM) products. It covers the following key topics:</p>
+<ol type="1">
+<li>The importance of evaluation systems in LLM applications</li>
+<li>Key differences between LLM evaluation and traditional ML
+evaluation</li>
+<li>Methodologies for assessing relevance and faithfulness in LLMs</li>
+<li>Engineering considerations for optimizing business outcomes,
+establishing evaluation processes, and efficiently allocating
+development resources</li>
+</ol>
+<h2 id="1-the-importance-of-evaluation"><strong>1.</strong> The
+Importance of Evaluation</h2>
+<p><strong>Evaluation is critical for developing data-driven ML
+products, including LLMs, for several reasons:</strong></p>
+<ul>
+<li><strong>Performance Validation</strong>: Rigorous evaluation ensures
+that the model meets predefined performance standards. This process
+involves verifying that the model behaves as expected across various
+scenarios, allowing ML engineers to refine, improve, and ensure
+robustness prior to deployment.</li>
+<li><strong>Informed Product Decision-Making</strong>: Evaluation
+provides essential insights into the effectiveness of ML-powered
+features, guiding strategic decisions on whether to launch, iterate, or
+retire them. This ensures that only features meeting high performance
+and customer value standards are integrated into the product.</li>
+<li><strong>Credibility in Sales</strong>: Reliable evaluation results
+provide the Sales team with concrete evidence of the system’s
+reliability. This empowers them to make confident claims about the
+model’s performance, thereby enhancing customer trust and facilitating
+successful sales engagements.</li>
+<li><strong>Return on Investment (ROI) Justification</strong>: For
+business stakeholders, evaluation is a critical tool for understanding
+the ROI of ML models. By linking model performance to business outcomes,
+stakeholders can make informed decisions on scaling efforts, market
+entry, and feature expansion.</li>
+<li><strong>Enhancing Customer Trust and Experience</strong>:
+Continuous, thorough evaluation ensures that the product maintains high
+quality, fosters ongoing improvements, and ultimately delivers greater
+value to customers, thereby bolstering their trust in the product.</li>
+</ul>
+<h2
+id="2-distinctions-between-llm-evaluation-and-traditional-ml-evaluation">2.
+Distinctions between LLM evaluation and traditional ML evaluation</h2>
+<p>There are several angles from which LLM and traditional ML evaluation
+can be compared. In this article, we focus on the distinctions in input,
+output, and evaluation metrics. The nature of input, output, and
+evaluation metrics differ significantly between traditional ML
+applications and those powered by large language models (LLMs):</p>
+<p><strong>A. Input Representation</strong>:</p>
+<p><strong>— Traditional ML</strong>: Inputs are generally transformed
+to a structured form through meticulous feature engineering and
+preprocessing. The context is explicitly specified and standardized,
+ensuring relevant patterns are clearly defined for the model to
+learn.</p>
+<p><strong>— LLM-Powered Applications</strong>: LLMs excel at processing
+unstructured data, particularly unstructured text, which can be verbose,
+ambiguous, or nuanced. A single context can be expressed in various
+ways, and the model may interpret these variations differently, which
+can sometimes result in inconsistencies in understanding.</p>
+<p><strong>B. Output Consistency</strong>:</p>
+<p><strong>— Traditional ML</strong>: Outputs are typically
+deterministic for classification or regression problems, yielding
+consistent predictions for the same inputs, particularly in
+classification or regression tasks.</p>
+<p><strong>— LLM-Powered Applications</strong>: The relationship between
+input and output is often many-to-many due to the model’s probabilistic
+nature. This probabilistic approach is a result of the model generating
+text based on learned distributions from its training data. Evaluating
+the quality and relevance of the output is challenging, as it lacks a
+straightforward objective measure.</p>
+<p><strong>C. Model Evaluation Metrics:</strong></p>
+<p><strong>— Traditional ML</strong>: Success is generally assessed
+using quantitative metrics such as precision, recall, AUC-ROC, and nDCG,
+which are well-suited for classification, regression, and ranking
+tasks.</p>
+<p><strong>— LLM-Powered Applications</strong>: Success is more complex
+and should be measured by the following metrics. Evaluating these
+criteria often requires a combination of automated metrics and human
+judgment due to the nuanced nature of language tasks.</p>
+<ul>
+<li><strong>Relevance</strong>: The alignment of responses with input
+queries.</li>
+<li><strong>Faithfulness and entailment</strong>: The logical
+consistency and factual accuracy within the given context.</li>
+<li><strong>Language fluency and Coherence</strong>: Clear, fluid
+language and a consistent logical flow.</li>
+<li><strong>Ethical and Safety Standards</strong>: Adherence to
+guidelines that ensure the model does not generate harmful or biased
+content, which is critical for certain applications.</li>
+</ul>
+<h2
+id="3-methodologies-for-evaluating-llms-relevance-and-faithfulness">3.
+Methodologies for Evaluating LLM’s Relevance and Faithfulness</h2>
+<p>LLM applications are often tailored to domain-specific tasks like
+summarization, Q&amp;A, and retrieval-augmented generation (RAG). These
+products typically leverage advanced LLMs such as GPT, Claude, and
+LLama, which already meet high standards for language fluency, ethical
+considerations, and safety. While some applications may impose
+additional requirements, a common challenge lies in evaluating relevance
+and faithfulness, particularly when LLM responses are in free text
+format. Below are methodologies for assessing these aspects:</p>
+<p><strong>— Relevance:</strong> Refers to how well the responses align
+with input queries.</p>
+<ul>
+<li><strong>Semantic Similarity:</strong> Tools like BERTScore measure
+the similarity between the input/query and the output, providing a
+quantitative assessment of relevance.</li>
+<li><strong>User Feedback:</strong> Though subjective, direct user
+feedback can complement semantic measures for a more comprehensive
+evaluation.</li>
+<li><strong>Expert or Crowdsourced Review:</strong> Human judgment can
+be employed, though it may introduce noise and inaccuracies.</li>
+</ul>
+<p><strong>— Faithfulness and Entailment:</strong> Involves assessing
+the logical consistency and factual accuracy within the given
+context.</p>
+<ul>
+<li><strong>Lexical Metrics:</strong> Metrics like BLEU, ROUGE, and WER
+are sometimes used to capture faithfulness, though they may fall short
+in evaluating faithfulness due to their focus on common phrases rather
+than core facts.</li>
+<li><strong>Faithful Q&amp;A Evaluation</strong> <a
+href="https://aclanthology.org/2020.acl-main.454/">[1]</a> [<a
+href="https://arxiv.org/abs/2004.04228">2</a>]<strong>:</strong> This
+method assesses the faithfulness of an LLM response by generating
+questions based on the response’s core facts and comparing the answers
+to ensure consistency with the provided context.</li>
+<li><strong>Chain-of-Verification [</strong><a
+href="https://arxiv.org/abs/2309.11495"><strong>3</strong></a><strong>]:</strong>
+Involves generating questions on the core facts of an LLM response and
+comparing subsequent answers to ensure alignment, thereby validating the
+faithfulness of the original response.</li>
+<li><strong>Expert or Crowdsourced Review:</strong> While it can require
+more expertise, this method may introduce more noise than relevance
+judgments.</li>
+</ul>
+<h2 id="4-engineering-considerations">4. Engineering Considerations</h2>
+<h3
+id="41-aligning-llm-optimization-efforts-to-business-objectives"><strong>4.1
+Aligning LLM optimization efforts to business objectives</strong></h3>
+<p>Not every company that adopts AI can clearly measure the tangible
+impact it has on their business. This challenge often arises from a
+misalignment between LLM optimization efforts and primary business
+objectives such as revenue, conversion, and user engagement.</p>
+<p>To effectively optimize an LLM, it is essential to first establish
+clear business metrics and then analyze whether LLM performance metrics
+directly or indirectly contribute to these business outcomes. Defining
+appropriate business metrics is critical for measuring the overall
+success of the product, including its LLM components — a task that
+requires careful planning and consideration.</p>
+<p>It is crucial to closely monitor the relationship between LLM metrics
+and business metrics. If a noticeable divergence occurs, it is important
+to thoroughly understand the cause. If the implementation is sound, such
+a divergence may indicate that LLM improvements are not sufficiently
+driving business objectives, or it could suggest that the business
+metrics themselves need to be revised to better align with the business
+goals.</p>
+<h3 id="42-establishing-a-robust-evaluation-process">4.2 Establishing a
+Robust Evaluation Process</h3>
+<p>Setting up an effective evaluation process requires careful planning
+and execution tailored to the product’s specific needs. Below are key
+steps to establish a generic evaluation process:</p>
+<p><strong>— Define Objectives and Metrics</strong>: Begin by selecting
+ML metrics that quantitatively align with business outcomes. This
+alignment ensures that the model delivers tangible value and supports
+strategic business goals. The choice of metrics should reflect the
+desired balance between model accuracy and the business impact of model
+outputs.</p>
+<p><strong>— Offline Evaluation</strong>: This step involves splitting
+data into training, validation, and test sets. Ensuring accurate
+preprocessing and consistent labeling is critical to represent the task
+effectively. Offline evaluation provides an initial understanding of how
+the model performs under controlled conditions before being exposed to
+real-world data.</p>
+<p><strong>— Online Evaluation</strong>: Once the model is deployed,
+analyzing production user activity and feedback to assess performance in
+real-world scenarios is vital. This includes monitoring key performance
+indicators (KPIs) and user interactions to determine how well the model
+meets customer expectations and business objectives.</p>
+<p><strong>— Monitoring and Continuous Evaluation</strong>: The
+evaluation process doesn’t end with deployment. Continuous monitoring of
+model performance is essential to identify and address shifts in data
+distribution or production issues. Establishing a robust troubleshooting
+framework and implementing solid data governance practices are crucial
+to maintaining model reliability and relevance over time.</p>
+<h2
+id="43-balancing-development-resources-between-product-evaluation-work-and-new-product-features-in-ai-driven-companies">4.3
+Balancing Development Resources between Product Evaluation Work and New
+Product Features in AI-Driven Companies</h2>
+<p>How do we balance the need for thorough product evaluation with the
+development of new product features when resources are limited? The
+primary goal of any company is to drive revenue growth by delivering
+value to customers. In the context of customer-facing products,
+evaluating machine learning models, especially LLMs, isn’t solely about
+perfecting metrics or building an exhaustive evaluation framework. While
+technical rigor is important, engineering leaders must prioritize
+creating authentic and reliable evaluation systems that inform key
+product decisions, without stalling the development of new features that
+directly enhance customer value.</p>
+<p>With resource constraints in mind, it is critical to balance the
+effort spent on product evaluation and the strategic development of new
+features. This requires careful consideration of customer needs,
+competitive pressures, workload capacity, and the potential impact of
+these initiatives. By focusing on essential aspects of evaluation while
+pushing forward new features, we ensure our engineering efforts align
+with business goals, driving sustainable growth and customer
+satisfaction even with limited resources.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Evaluation plays a pivotal role in the development and deployment of
+LLM-powered products. It ensures not only technical excellence but also
+business relevance and customer satisfaction. As the field of AI and
+LLMs continues to evolve rapidly, robust evaluation practices will
+become increasingly crucial. They will help organizations navigate the
+complexities of these powerful technologies, mitigate risks, and
+maximize the value delivered to customers. By maintaining a balanced
+approach that considers both technical performance and business
+objectives, companies can harness the full potential of LLMs while
+driving sustainable growth and innovation in an increasingly AI-driven
+world.</p>
+<h2 id="references">References</h2>
+<p>Goyal, T., Durrett, G., &amp; He, H. (2020). Evaluating factuality in
+generation with dependency-level entailment. <em>Proceedings of the 58th
+Annual Meeting of the Association for Computational Linguistics</em>,
+7557–7569. <a
+href="https://doi.org/10.18653/v1/2020.acl-main.454"><span>https://doi.org/10.18653/v1/2020.acl-main.454</span></a></p>
+<p>Gabriel, S., Cohan, A., Mishra, S., Barot, C., Ferraro, F., Peters,
+M., Gane, A., &amp; McCann, B. (2020). Go figure! A meta evaluation of
+factuality in summarization. <em>arXiv</em>. <a
+href="https://arxiv.org/abs/2004.04228"><span>https://arxiv.org/abs/2004.04228</span></a></p>
+<p>Wang, L., Wei, J., Zelikman, E., Tay, Y., Chung, H. W., Chowdhery,
+A., … &amp; Le, Q. (2023). Faithfulness emerges from simplicity:
+Improving chain-of-thought reasoning in language models. <em>arXiv</em>.
+<a
+href="https://arxiv.org/abs/2309.11495"><span>https://arxiv.org/abs/2309.11495</span></a></p>
+
+</article>
+<p class="back"><a href="/">← All writing</a></p>
+</main>
+<footer class="site">© 2026 Haifeng Zhao · <a href="https://github.com/piscaries">GitHub</a></footer>
+</body>
+</html>
