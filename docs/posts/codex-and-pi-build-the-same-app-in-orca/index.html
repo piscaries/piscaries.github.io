@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I had Codex and Pi build the same app in Orca, then compared them side by side · Haifeng (Kevin) Zhao</title>
+<meta name="description" content="Two coding-agent teams, one chess coach, matched conditions. Every review passed both; side by side, the gaps were large.">
+<meta property="og:title" content="I had Codex and Pi build the same app in Orca, then compared them side by side · Haifeng (Kevin) Zhao">
+<meta property="og:description" content="Two coding-agent teams, one chess coach, matched conditions. Every review passed both; side by side, the gaps were large.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://piscaries.github.io/posts/codex-and-pi-build-the-same-app-in-orca/">
+<meta property="og:image" content="https://piscaries.github.io/images/codex-and-pi-build-the-same-app-in-orca/fig2-architecture.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://piscaries.github.io/posts/codex-and-pi-build-the-same-app-in-orca/">
+<link rel="alternate" type="application/rss+xml" title="Haifeng (Kevin) Zhao" href="/feed.xml">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site"><a class="name" href="/">Haifeng (Kevin) Zhao</a><nav><a href="/">Writing</a><a href="/about/">About</a><a href="/feed.xml">RSS</a></nav></header>
+<main>
+<article>
+<h1>I had Codex and Pi build the same app in Orca, then compared them side by side</h1>
+<p class="meta"><time datetime="2026-10-05">October 5, 2026</time></p>
+<p class="note">Code, data and reproduction steps: <a href="https://github.com/piscaries/codex-vs-pi-in-orca">github.com/piscaries/codex-vs-pi-in-orca</a>.</p>
+<p>Different coding agents are good at different jobs, and what each one
+is good at shifts every time its model is updated. Which agent you put
+on which stage of the work directly shapes the quality of the software
+you ship. So how do you find out which agent fits which stage?</p>
+<p>Tools like Orca and Herdr make that question answerable. They let you
+assign a different coding agent to each task in one development
+environment, which also makes it cheap to give two agents the same job
+and compare them. To show how, I set up a separate coding agent for each
+stage of development (spec, design, build) and staffed every stage
+twice: one team ran entirely on Codex, the other entirely on Pi. Both
+teams built the same app, a chess coach, from the same requirements,
+prompts and starting code. Then I compared them on two layers:</p>
+<ul>
+<li><strong>How they built it.</strong> An independent reviewer and
+blind judges scored each agent's spec, design and code: requirement
+coverage, soundness, code quality.</li>
+<li><strong>What they built.</strong> Both apps contain a chess engine,
+so the two engines played each other, a result no judge has to
+score.</li>
+</ul>
+<p>By the end of this post you will know:</p>
+<ul>
+<li>What Orca is, and how you can use it to build products with a team
+of coding agents.</li>
+<li>How to find out which of today's agents suits which task.</li>
+<li>How the apps that Codex and Pi each built compare: on hidden tests,
+coaching, and a head-to-head engine match.</li>
+</ul>
+<h2
+id="the-setup-two-coding-agent-teams-matched-conditions-one-chess-problem">The
+setup: two coding-agent teams, matched conditions, one chess
+problem</h2>
+<p>Both teams and the shared reviewer ran in Orca, an IDE built for
+coding agents; the <a
+href="#how-to-build-and-run-the-two-teams-in-orca">next section</a>
+shows how.</p>
+<p>The comparison puts two coding-agent teams side by side: one built on
+Codex, running OpenAI's GPT-5.6 Sol, and one built on Pi, running Z.AI's
+GLM-5.3. Z.AI benchmarks GLM-5.3 against GPT-5.6 Sol in its own launch
+results, so the two models are from the same generation. An earlier run
+used GPT-5.5; it is kept in the <a
+href="https://github.com/piscaries/codex-vs-pi-in-orca/tree/main/runs/gpt-5.5">repository</a>.</p>
+<p>Codex and Claude Code come fully set up around their vendor's models
+and tools. Pi is a bare agent by design: it starts with four basic
+tools, works with models from many providers, and leaves the rest to you
+to configure: prompts, skills, extensions. To keep the test fair, I
+checked that everything except the agent matched:</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Codex track</th>
+<th>Pi track</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Model</td>
+<td>GPT-5.6 Sol</td>
+<td>GLM-5.3 (benchmarked by Z.AI against GPT-5.6 Sol)</td>
+</tr>
+<tr>
+<td>Task text</td>
+<td>Identical</td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>Role prompt</td>
+<td>Top of the task message</td>
+<td>Top of the task message</td>
+</tr>
+<tr>
+<td>Reasoning effort</td>
+<td>High (not its top setting, xhigh)</td>
+<td>High (not its top setting, max)</td>
+</tr>
+<tr>
+<td>Personal configuration</td>
+<td>Clean config; Codex's bundled skills, a task-continuity plugin and
+Orca's status hooks</td>
+<td>None; skills off; Orca's status extension</td>
+</tr>
+<tr>
+<td>Built-in tools</td>
+<td>Codex's own: web search, sub-agents, plugins and more (it used only
+shell commands and two web searches)</td>
+<td>read, bash, edit, write</td>
+</tr>
+<tr>
+<td>Reviewer, judges, hidden tests</td>
+<td>Shared</td>
+<td>Shared</td>
+</tr>
+</tbody>
+</table>
+<p>This compares two agent-and-model pairs: the agent and the model
+changed together, so the results cannot say which of the two made the
+difference.</p>
+<p>Both agents get the same project: a chess coach for adult beginners.
+You play the computer. After each move, the coach tells you in plain
+words whether it was good and what was better, and at the end it reviews
+your worst moves. I chose chess for three reasons:</p>
+<ul>
+<li><strong>It is hard.</strong> Chess rules, a search engine and honest
+coaching are all easy to get subtly wrong.</li>
+<li><strong>It is checkable.</strong> Correct rules can be verified
+against published move counts.</li>
+<li><strong>The results can compete.</strong> The two engines can play
+each other, with no judge needed.</li>
+</ul>
+<p><strong>A fair contest gives both agents the same task, the same
+reviewer and the same settings, and it ends in a result no judge has to
+score.</strong></p>
+<h2 id="how-to-build-and-run-the-two-teams-in-orca">How to build and run
+the two teams in Orca</h2>
+<p>To compare the two agents on real software work, I needed the same
+multi-agent engineering team twice: once staffed by Codex, once by
+Pi.</p>
+<p><strong>Orca is an agent development environment: an IDE built for
+coding agents.</strong> It runs Claude Code, Codex and other coding
+agents in parallel, each in its own git worktree and terminal, so agents
+working at the same time never edit the same files; Claude Code, Codex
+and Pi shared one window for this project. Orca also records the work as
+a Run (the whole job), Tasks (its pieces) and Dispatches (attempts at a
+task). A coordinator dispatches tasks, workers report back when they
+finish, and a worker can stop and ask the coordinator a question.</p>
+<p><img
+src="/images/codex-and-pi-build-the-same-app-in-orca/fig1-orca-annotated.png"
+alt="Orca with the Codex team&#39;s spec worktree, annotated" /></p>
+<p><em>Figure 1. Orca with the Codex team's spec task: its own worktree
+and terminal, and Codex reporting back to the coordinator. Unrelated
+items are blurred.</em></p>
+<p><strong>The architecture is built for the comparison.</strong> The
+two teams are identical except for the author agent: same roles, same
+flow, one shared reviewer. The judging sits outside both teams.</p>
+<p><img
+src="/images/codex-and-pi-build-the-same-app-in-orca/fig2-architecture.png"
+alt="Two identical teams in Orca, one per agent, with a shared reviewer between them; two blind judges score the specs, designs and finished apps, and both finished apps go through hidden tests, a coaching comparison, an engine match and an acceptance review." /></p>
+<p><em>Figure 2. The two teams differ only in the author agent. The
+reviewer sits between them; everything orange happens outside both
+teams.</em></p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Codex team</th>
+<th>Pi team</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Product designer: writes the spec</td>
+<td>Codex (GPT-5.6 Sol)</td>
+<td>Pi (GLM-5.3)</td>
+</tr>
+<tr>
+<td>Engineering designer: writes the design and build plan</td>
+<td>Codex</td>
+<td>Pi</td>
+</tr>
+<tr>
+<td>Builder: implements one phase at a time</td>
+<td>Codex</td>
+<td>Pi</td>
+</tr>
+<tr>
+<td>Code reviewer and acceptance reviewer</td>
+<td>Claude Code (Claude Opus 4.6)</td>
+<td>Claude Code (Claude Opus 4.6)</td>
+</tr>
+<tr>
+<td>Coordinator: assigns work, answers questions</td>
+<td>me, through Orca</td>
+<td>me, through Orca</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How a team is launched.</strong> Each role is a short prompt
+file that says how to do the job, what the output must look like and
+when it is done. A shared charter, <code>TEAM.md</code>, sets the rules:
+work only in your own files, report only checks you actually ran, and
+ask instead of guessing. Here is the start of the builder's file, open
+in Orca:</p>
+<p><img
+src="/images/codex-and-pi-build-the-same-app-in-orca/fig3-builder-prompt.png"
+alt="The builder&#39;s role file open in Orca" /></p>
+<p><em>Figure 3. The builder's role file, open in Orca. Every role is a
+file like this in prompts/team/ (right), published as <a
+href="https://github.com/piscaries/codex-vs-pi-in-orca/tree/main/team">team/</a>
+in the repository.</em></p>
+<p>Each team works on its own branch, and both branches start from the
+same commit, with no chess code in it. For every task, Orca creates a
+fresh worktree and terminal, and a launch script starts the agent with
+the settings from the fairness table.</p>
+<p>The charter, the role file and the task then go to the agent as one
+message with <code>orca orchestration worker-start</code>.</p>
+<p><strong>How a team runs.</strong> Both teams follow the same reviewed
+steps: spec, review, design, review, then the build, one phase at a
+time. Codex's design split the build into five phases; Pi's split it
+into six. Every phase goes to a new reviewer session: REWORK sends it
+back, PASS merges it into the team's branch. When an agent asks a
+question, I answer it as the coordinator.</p>
+<p>Orca records every task in the Run. Here is the Codex team's, from
+<code>orca orchestration task-list</code>:</p>
+<pre class="text"><code>task_11d4deb17dca [completed] t3 spec
+task_00bd0eb480d4 [completed] t3 spec review
+task_20b40a9707ed [completed] t3 design
+task_c06515b888ae [completed] t3 design review
+task_139320b8ec8c [completed] t3 build P0
+task_70a5ee00f59e [completed] t3 code review P0
+task_fdf015a5ba05 [completed] t3 build P1
+task_b3266b5137e5 [completed] t3 code review P1
+task_fc3fa6d33368 [completed] t3 build P2
+task_18800831512e [completed] t3 code review P2
+task_3333bdb35a88 [completed] t3 build P3
+task_682619f0e842 [completed] t3 code review P3
+task_7a006755404b [completed] t3 build P4
+task_331cf6f00cd8 [completed] t3 code review P4
+task_65f1c06cb47a [completed] t3 acceptance</code></pre>
+<p><strong>How the teams are compared.</strong> On two layers, with the
+reviews and the scoring done blind:</p>
+<ul>
+<li><strong>How they built it.</strong> The reviewer checks each team's
+spec, design and code on its own, and is given only a track label,
+though Codex's own handoff notes named its model family. Each agent's
+own logs supply the working time and token counts.</li>
+<li><strong>What they built.</strong> Both finished apps run 43
+acceptance tests that no agent ever saw, written and fingerprinted
+before the run. Then I compare their coaching on the same positions, and
+the two chess engines play each other. A final acceptance review plays
+full games in each app as a beginner would.</li>
+<li><strong>Blind judges, across both layers.</strong> Two strong
+judges, Claude Opus 5.5 and GPT-6.1 Sol, score the two specs, the two
+designs and the two finished apps side by side as A and B, with anything
+that could identify the author removed. Each rubric is split between
+general engineering practice and what this product needs: correct rules,
+a strong engine, truthful coaching and a responsive page. For the
+finished apps, the judges run both, test them, and play the two engines
+against each other. I wrote this rubric after an earlier, generic one
+had failed to tell the two engines apart; both teams were scored against
+the same rubric, and the judges never saw the match results.</li>
+</ul>
+<p>With both teams built and run to the end, the results in short:</p>
+<ul>
+<li>With the same task, prompts and reviewer, Codex (GPT-5.6 Sol)
+finished in under a quarter of Pi's time; Pi (GLM-5.3) built the far
+stronger chess engine.</li>
+<li>Both apps passed all 43 hidden tests, yet Pi's engine beat Codex's
+19–1 in a head-to-head match.</li>
+<li>Reviewed one at a time, every spec, design and code change passed.
+Side by side, blind judges and measurements found what single reviews
+missed: a weak engine, a page that freezes, boards drawn wrong.</li>
+</ul>
+<p>The sections below go through each layer, starting with how each team
+worked.</p>
+<h2 id="codex-builds-four-times-faster">Codex builds four times
+faster</h2>
+<p>Codex's team finished in under a quarter of Pi's time, at a similar
+cost. Neither build had a time limit, so how long to spend was each
+agent's own choice.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Codex</th>
+<th>Pi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Working time: spec / design / build</td>
+<td><strong>48 min</strong> (4 / 5 / 40)</td>
+<td>217 min (7 / 4 / 207)</td>
+</tr>
+<tr>
+<td>Tokens used (of which output, incl. reasoning)</td>
+<td><strong>10.8 million</strong> (150,000)</td>
+<td>32.0 million (541,000)</td>
+</tr>
+<tr>
+<td>Equivalent API cost at list prices</td>
+<td><strong>$9.24</strong></td>
+<td>$11.42</td>
+</tr>
+<tr>
+<td>Code reviews passed first time</td>
+<td>5 of 5</td>
+<td>6 of 6</td>
+</tr>
+</tbody>
+</table>
+<p>Both agents ran on subscriptions (ChatGPT for Codex, Z.AI's GLM
+Coding Plan for Pi), so the like-for-like figure is the API cost at list
+prices: $4, $0.40 and $20 per million input, cached-input and output
+tokens for GPT-5.6 Sol, against $1.40, $0.26 and $4.40 for GLM-5.3. At
+GPT-5.6 Sol's launch price, before an August price cut, Codex's run
+would have cost $12.31. Pi used three times the tokens at a much lower
+price per token. Its working time includes about 13 minutes spent
+waiting for me to answer a question.</p>
+<p>The two agents also asked for help differently. Codex asked three
+questions: how to treat input the spec left undefined, whether to
+correct a test position it had written wrongly, and what to do about a
+test command from its own plan that did not run. Pi asked two. Midway
+through the build, it measured that a coach comment plus the computer's
+reply took about 2.45 seconds, over the spec's 2-second limit, and asked
+to cut the coach's time budget from 1.2 to 0.5 seconds. Later it asked
+to edit a file outside its phase.</p>
+<p><strong>What the judges saw.</strong> The reviewer, seeing each
+design alone, scored them 88 and 87 and accepted both. Side by side, the
+two strong judges split on the specs and designs: Opus 5.5 preferred
+Pi's, GPT-6.1 Sol preferred Codex's. They agreed on two things specific
+to a chess coach: Pi had planned the stronger engine, with a fuller
+search and evaluation, and Codex the more responsive page, with its
+search in a background worker. The finished apps bore out both (next
+section). On coaching they split.</p>
+<h3 id="what-the-ai-reviewers-missed">What the AI reviewers missed</h3>
+<p>Every code review passed, and both acceptance reviews rated the board
+as clear. Yet both boards have rows of uneven height, and Pi's colors
+are reversed. I found this only by measuring the page (Figure 4). The
+judges, scoring the finished apps side by side, found two more: Pi's
+page stalls for half a second or more while the computer thinks, because
+its search runs on the page's main thread, and Codex's level-weakening
+noise has no effect. A single review asks whether a change is good
+enough; only side by side do the gaps show.</p>
+<h2 id="pis-engine-beats-codexs-18-wins-2-draws-no-losses">Pi's engine
+beats Codex's: 18 wins, 2 draws, no losses</h2>
+<p>Start with a look. Here are both apps after the same moves: 1.e4 d5
+(the computer answered d5 in both), then a deliberate blunder, 2.Ba6,
+which leaves the bishop hanging.</p>
+<p><img
+src="/images/codex-and-pi-build-the-same-app-in-orca/fig4-apps-side-by-side.png"
+alt="Both chess coaches after 1.e4 d5 2.Ba6, with the board defects marked" /></p>
+<p><em>Figure 4. Both apps after 1.e4 d5 2.Ba6. Both coaches flag the
+hanging bishop; Pi's explains it in plainer words. The red marks show
+board defects that no AI reviewer reported: rows of unequal height on
+both boards, and Pi's light and dark squares the wrong way
+round.</em></p>
+<ul>
+<li><strong>Codex's coach</strong> says "Your opponent can capture your
+bishop on a6 with their pawn from b7. Try move from b1 to c3." It names
+the pieces, but gives the better move as squares rather than naming the
+piece.</li>
+<li><strong>Pi's coach</strong> names the pawn that captures, notes that
+nothing can take it back, and gives the better move in plain words. Pi's
+app also lets you play Black.</li>
+</ul>
+<p>Both engines are correct: each passed all 43 hidden tests. The tests
+check the rules, but they cannot say which app is better. Two things
+can.</p>
+<p><strong>Pi coaches better.</strong> On the same positions:</p>
+<table>
+<thead>
+<tr>
+<th>Position</th>
+<th>Codex's coach</th>
+<th>Pi's coach</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Queen moved where a pawn takes it</td>
+<td>"Your opponent can capture your queen on d4 with their pawn from
+c5."</td>
+<td>"Your queen on d4 can now be captured for free by the pawn on c5. A
+stronger move was moving your queen from d1 to d5."</td>
+</tr>
+<tr>
+<td>Checkmating move</td>
+<td>"That was the strongest move."</td>
+<td>"Checkmate — you win the game."</td>
+</tr>
+<tr>
+<td>Weak first move, 1.g4</td>
+<td>Rated best</td>
+<td>Rated an inaccuracy; suggests developing the knight</td>
+</tr>
+<tr>
+<td>Time per comment</td>
+<td>30–351 ms</td>
+<td>about 500 ms</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Pi's engine is far stronger.</strong> The two engines played
+20 games: 10 fixed openings, each side playing White once, 200
+milliseconds per move. Pi won 18, every one by checkmate, and drew the
+other 2. Codex won none.</p>
+<p><img
+src="/images/codex-and-pi-build-the-same-app-in-orca/fig5-match.png"
+alt="Game 15, mid-game and final position" /></p>
+<p><em>Figure 5. Game 15, Codex playing White. At mid-game the material
+is level; Pi (Black) finishes with mate on d1.</em></p>
+<p>A 19–1 result invites doubt, so I checked what could have tilted it.
+Neither app contains third-party code, and both engines were frozen
+before the match and played through my own script, with no agent
+involved. Each move had the same 200 ms, and Pi used less of it. The
+first match used Codex's rules as referee; with Pi's rules and a full
+second per move, a second match still ended 16.5–3.5 for Pi, and every
+blind judge's own games went to Pi too. The full logs are in the <a
+href="https://github.com/piscaries/codex-vs-pi-in-orca">repository</a>.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Different coding agents are good at different jobs, and the reliable
+way to know which fits which stage is to compare them on your own work.
+Orca makes that practical: I defined one engineering team as plain role
+files and ran it twice, once on Codex and once on Pi. Codex finished in
+under a quarter of the time; Pi built the better chess coach. Reviewed
+one at a time, both teams passed every check; the gaps showed up only
+side by side.</p>
+<p>Two lessons about the method itself. <strong>Compare models of the
+same generation</strong>, or the result may only show which model is
+newer. <strong>Judge the product, not just the plans, with criteria
+specific to it:</strong> general engineering criteria could not tell a
+strong engine from a weak one.</p>
+<p>Pi with GLM-5.3 deserves a closer look. On this project it built a
+better product than Codex with GPT-5.6 Sol, and it is well worth trying
+in your own development.</p>
+<p>These results come from one project. <strong>The method is the part
+to keep:</strong> each time a new model or coding agent comes out,
+<strong>try it side by side with your current one on a few tasks from
+your own projects.</strong> That tells you more than reported scores
+about what it brings to your work.</p>
+<p><em>Everything behind this post, from the prompts and task messages
+to both apps, the hidden tests and the match logs, is in the <a
+href="https://github.com/piscaries/codex-vs-pi-in-orca">repository</a>,
+along with a step-by-step <a
+href="https://github.com/piscaries/codex-vs-pi-in-orca/blob/main/REPRODUCE.md">reproduction
+guide</a>. This is a follow-up to an <a
+href="/posts/can-open-source-coding-agents-build-comparable-software-for/">earlier
+experiment</a> with open-source coding agents.</em></p>
+
+</article>
+<p class="back"><a href="/">← All writing</a></p>
+</main>
+<footer class="site">© 2026 Haifeng (Kevin) Zhao · <a href="https://github.com/piscaries">GitHub</a></footer>
+</body>
+</html>

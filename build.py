@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC, OUT = os.path.join(ROOT, 'src'), os.path.join(ROOT, 'docs')
 SITE = {
-    'title': 'Haifeng Zhao',
+    'title': 'Haifeng (Kevin) Zhao',
     'tagline': 'Notes on building with LLMs and coding agents',
     'url': 'https://piscaries.github.io',
 }
