@@ -112,7 +112,7 @@ task_65f1c06cb47a [completed] t3 acceptance
 With both teams built and run to the end, the results in short:
 
 - With the same task, prompts and reviewer, Codex (GPT-5.6 Sol) finished in under a quarter of Pi's time; Pi (GLM-5.3) built the far stronger chess engine.
-- Both apps passed all 43 hidden tests, yet Pi's engine beat Codex's 19–1 in a head-to-head match.
+- Both apps passed all 43 hidden tests, yet in a 20-game match Pi's engine won 18 and drew 2 against Codex's.
 - Reviewed one at a time, every spec, design and code change passed. Side by side, blind judges and measurements found what single reviews missed: a weak engine, a page that freezes, boards drawn wrong.
 
 The sections below go through each layer, starting with how each team worked.
@@ -160,13 +160,13 @@ Both engines are correct: each passed all 43 hidden tests. The tests check the r
 | Weak first move, 1.g4 | Rated best | Rated an inaccuracy; suggests developing the knight |
 | Time per comment | 30–351 ms | about 500 ms |
 
-**Pi's engine is far stronger.** The two engines played 20 games: 10 fixed openings, each side playing White once, 200 milliseconds per move. Pi won 18, every one by checkmate, and drew the other 2. Codex won none.
+**Pi's engine is far stronger.** The two engines played 20 games: 10 fixed openings, each side playing White once, 200 milliseconds per move. Pi won 18, every one by checkmate, and drew the other 2. Codex won none. Counting a draw as half a point, that is 19–1.
 
 ![Game 15, mid-game and final position](/images/codex-and-pi-build-the-same-app-in-orca/fig5-match.png)
 
 *Figure 5. Game 15, Codex playing White. At mid-game the material is level; Pi (Black) finishes with mate on d1.*
 
-A 19–1 result invites doubt, so I checked what could have tilted it. Neither app contains third-party code, and both engines were frozen before the match and played through my own script, with no agent involved. Each move had the same 200 ms, and Pi used less of it. The first match used Codex's rules as referee; with Pi's rules and a full second per move, a second match still ended 16.5–3.5 for Pi, and every blind judge's own games went to Pi too. The full logs are in the [repository](https://github.com/piscaries/codex-vs-pi-in-orca).
+A result this lopsided invites doubt, so I checked what could have tilted it. Neither app contains third-party code, and both engines were frozen before the match and played through my own script, with no agent involved. Each move had the same 200 ms, and Pi used less of it. The first match used Codex's rules as referee; with Pi's rules and a full second per move, a second 20-game match still went to Pi, 13 wins and 7 draws (16.5–3.5), and every blind judge's own games went to Pi too. The full logs are in the [repository](https://github.com/piscaries/codex-vs-pi-in-orca).
 
 ## Conclusion
 
